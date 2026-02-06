@@ -8,9 +8,6 @@ importers:
 
   .:
     devDependencies:
-      '@sindresorhus/tsconfig':
-        specifier: ^3.0.1
-        version: 3.0.1
       '@types/node':
         specifier: ^25.2.0
         version: 25.2.1
@@ -381,10 +378,6 @@ packages:
   '@sindresorhus/merge-streams@4.0.0':
     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
     engines: {node: '>=18'}
-
-  '@sindresorhus/tsconfig@3.0.1':
-    resolution: {integrity: sha512-0/gtPNTY3++0J2BZM5nHHULg0BIMw886gqdn8vWN+Av6bgF5ZU2qIcHubAn+Z9KNvJhO8WFE+9kDOU3n6OcKtA==}
-    engines: {node: '>=14'}
 
   '@tsconfig/node10@1.0.12':
     resolution: {integrity: sha512-UCYBaeFvM11aU2y3YPZ//O5Rhj+xKyzy7mvcIoAjASbigy8mHMryP5cK7dgjlz2hWxh1g5pLw084E0a/wlUSFQ==}
@@ -3210,8 +3203,6 @@ snapshots:
   '@sindresorhus/merge-streams@2.3.0': {}
 
   '@sindresorhus/merge-streams@4.0.0': {}
-
-  '@sindresorhus/tsconfig@3.0.1': {}
 
   '@tsconfig/node10@1.0.12': {}
 

@@ -13,18 +13,18 @@ async function withRetry<T>(
 			return await function_();
 		} catch (error) {
 			lastError = error as Error;
-			const isRateLimited =
-				error instanceof Error &&
-				(error.message.includes('429') ||
-					error.message.includes('Resource exhausted') ||
-					error.message.includes('quota'));
+			const isRateLimited
+				= error instanceof Error
+				&& (error.message.includes('429')
+					|| error.message.includes('Resource exhausted')
+					|| error.message.includes('quota'));
 
 			if (!isRateLimited || attempt === maxRetries) {
 				throw error;
 			}
 
 			// Exponential backoff: 2s, 4s, 8s
-			const delay = baseDelayMs * 2 ** attempt;
+			const delay = baseDelayMs * (2 ** attempt);
 			// eslint-disable-next-line no-await-in-loop
 			await new Promise<void>(resolve => {
 				setTimeout(resolve, delay);
@@ -130,8 +130,8 @@ ${JSON.stringify(Object.fromEntries(batch), null, 2)}`;
 		if (jsonMatch) {
 			try {
 				const batchTranslated = JSON.parse(jsonMatch[0]) as Record<
-					string,
-					string
+				string,
+				string
 				>;
 				for (const [key, value] of Object.entries(batchTranslated)) {
 					translated[key] = value;
