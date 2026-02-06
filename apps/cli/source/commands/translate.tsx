@@ -9,6 +9,7 @@ import {ApiKeyInput} from '../components/api-key-input.js';
 import {LanguageSelector} from '../components/language-selector.js';
 import {LlmSelector} from '../components/llm-selector.js';
 import {ModelSelector} from '../components/model-selector.js';
+import {OutputPathInput} from '../components/output-path-input.js';
 import {ReadmeInput} from '../components/readme-input.js';
 import {TranslationProgress} from '../components/translation-progress.js';
 
@@ -16,8 +17,13 @@ export const args = z.tuple([
 	z.string().describe('Path to the source JSON file (e.g., en.json)'),
 ]);
 
+export const options = z.object({
+	output: z.string().optional().describe('Output file path (defaults to {language}.json in the source directory)'),
+});
+
 type Props = {
 	readonly args: z.infer<typeof args>;
+	readonly options: z.infer<typeof options>;
 };
 
 type Step =
@@ -26,6 +32,7 @@ type Step =
 	| 'apiKey'
 	| 'language'
 	| 'readme'
+	| 'outputPath'
 	| 'translating'
 	| 'done';
 
@@ -43,17 +50,17 @@ function getApiKeyFromEnv(provider: Provider): string | undefined {
 	return process.env[apiKeyEnvVars[provider]];
 }
 
-export default function Translate({args: commandArgs}: Props) {
+export default function Translate({args: commandArgs, options: commandOptions}: Props) {
 	const [filePath] = commandArgs;
 	const [step, setStep] = useState<Step>('provider');
 	const [provider, setProvider] = useState<Provider | undefined>(undefined);
 	const [model, setModel] = useState<string>('gemini-2.0-flash');
 	const [apiKey, setApiKey] = useState<string>('');
 	const [targetLanguage, setTargetLanguage] = useState<string>('');
-	const [, setReadmePath] = useState<string>('');
 	const [error, setError] = useState<string>('');
 	const [progress, setProgress] = useState({current: 0, total: 0});
 	const [outputPath, setOutputPath] = useState<string>('');
+	const [readmeContent, setReadmeContent] = useState<string>('');
 
 	// Validate file exists
 	const absolutePath = path.resolve(filePath);
@@ -94,36 +101,51 @@ export default function Translate({args: commandArgs}: Props) {
 	};
 
 	const handleReadmeSubmit = (readme: string) => {
-		setReadmePath(readme);
+		// Store readme content for later use
+		if (readme && fs.existsSync(readme)) {
+			setReadmeContent(fs.readFileSync(readme, 'utf8'));
+		}
+
+		// If --output was provided, skip to translating; otherwise ask for output path
+		if (commandOptions.output) {
+			setOutputPath(path.resolve(commandOptions.output));
+			startTranslation(path.resolve(commandOptions.output));
+		} else {
+			setStep('outputPath');
+		}
+	};
+
+	/**
+	 * Computes the default output path based on the source file and target language.
+	 */
+	const getDefaultOutputPath = () => {
+		const dirName = path.dirname(absolutePath);
+		return path.join(dirName, `${targetLanguage}.json`);
+	};
+
+	const handleOutputPathSubmit = (outPath: string) => {
+		const resolvedPath = path.resolve(outPath);
+		setOutputPath(resolvedPath);
+		startTranslation(resolvedPath);
+	};
+
+	/**
+	 * Starts the translation process with the given output path.
+	 */
+	const startTranslation = (outPath: string) => {
 		setStep('translating');
 
-		// Start translation process
 		void (async () => {
 			try {
 				// Read source file
 				const sourceContent = fs.readFileSync(absolutePath, 'utf8');
 				const messages = JSON.parse(sourceContent) as Record<string, string>;
 
-				// Read readme if provided
-				let context = '';
-				if (readme && fs.existsSync(readme)) {
-					context = fs.readFileSync(readme, 'utf8');
-				}
-
-				// Generate output path
-				const extension = path.extname(absolutePath);
-				const baseName = path.basename(absolutePath, extension);
-				const dirName = path.dirname(absolutePath);
-				const outPath = path.join(
-					dirName,
-					`${baseName}.${targetLanguage}${extension}`,
-				);
-
 				// Translate
 				const translated = await translateMessages({
 					messages,
 					targetLanguage,
-					context,
+					context: readmeContent,
 					apiKey,
 					provider: provider!,
 					model,
@@ -170,6 +192,13 @@ export default function Translate({args: commandArgs}: Props) {
 			)}
 
 			{step === 'readme' && <ReadmeInput onSubmit={handleReadmeSubmit} />}
+
+			{step === 'outputPath' && (
+				<OutputPathInput
+					defaultPath={getDefaultOutputPath()}
+					onSubmit={handleOutputPathSubmit}
+				/>
+			)}
 
 			{step === 'translating' && (
 				<TranslationProgress
