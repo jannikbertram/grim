@@ -1,7 +1,8 @@
-import {generateText, type LanguageModel} from 'ai';
+import {generateText, Output, type LanguageModel} from 'ai';
 import {createGoogleGenerativeAI} from '@ai-sdk/google';
 import {createOpenAI} from '@ai-sdk/openai';
 import {createAnthropic} from '@ai-sdk/anthropic';
+import {z} from 'zod';
 
 /**
  * Supported LLM providers for translation.
@@ -186,8 +187,8 @@ export type Model = {
 /**
  * Translates a collection of messages from English to a target language using AI.
  *
- * Messages are processed in batches of 10 for efficiency. The function includes
- * automatic retry logic with exponential backoff for rate-limiting errors.
+ * Messages are processed in batches of 10 for efficiency. Uses structured output
+ * to guarantee valid JSON responses from the AI model.
  *
  * @param options - Configuration options for the translation
  * @returns A promise resolving to a Record mapping message IDs to their translated values
@@ -198,7 +199,7 @@ export type Model = {
  *   messages: { greeting: 'Hello', farewell: 'Goodbye' },
  *   targetLanguage: 'de',
  *   context: 'A friendly mobile app for ordering food',
- *   apiKey: process.env.GEMINI_API_KEY,
+ *   apiKey: process.env.GOOGLE_API_KEY,
  *   provider: 'gemini',
  *   model: 'gemini-2.0-flash',
  *   onProgress: (current, total) => console.log(`${current}/${total}`),
@@ -209,18 +210,17 @@ export type Model = {
  * @remarks
  * - Placeholders like `{name}`, `{count}`, `{{variable}}` are preserved
  * - HTML tags and markdown formatting are maintained
- * - If JSON parsing fails for a batch, original text is returned as fallback
  */
 export async function translateMessages({
-		messages,
-		targetLanguage,
-		context,
-		apiKey,
-		provider,
-		model: modelName,
-		onProgress,
-		aiModel,
-	}: TranslateOptions): Promise<Record<string, string>> {
+	messages,
+	targetLanguage,
+	context,
+	apiKey,
+	provider,
+	model: modelName,
+	onProgress,
+	aiModel,
+}: TranslateOptions): Promise<Record<string, string>> {
 	const model = aiModel ?? createModel(provider, modelName, apiKey);
 
 	const entries = Object.entries(messages);
@@ -253,35 +253,24 @@ Important guidelines:
 
 		const prompt = `${systemPrompt}
 
-Translate each of the following messages. Return ONLY a valid JSON object mapping the original keys to translated values.
+Translate each of the following messages:
 
-Messages to translate:
 ${JSON.stringify(Object.fromEntries(batch), null, 2)}`;
 
-		// eslint-disable-next-line no-await-in-loop
-		const result = await generateText({model, prompt, maxRetries: 0});
-		const response = result.text;
+		// Schema for structured output: record of string keys to string values
+		const translationSchema = z.record(z.string(), z.string().describe('Translated text'));
 
-		// Extract JSON from response
-		const jsonMatch = /{[\s\S]*}/.exec(response);
-		if (jsonMatch) {
-			try {
-				const batchTranslated = JSON.parse(jsonMatch[0]) as Record<
-					string,
-					string
-				>;
-				for (const [key, value] of Object.entries(batchTranslated)) {
-					translated[key] = value;
-				}
-			} catch {
-				// If JSON parsing fails, fall back to original
-				for (const [key, value] of batch) {
-					translated[key] = value;
-				}
-			}
-		} else {
-			// No JSON found in response, fall back to original
-			for (const [key, value] of batch) {
+		// eslint-disable-next-line no-await-in-loop
+		const result = await generateText({
+			model,
+			prompt,
+			output: Output.object({schema: translationSchema}),
+		});
+
+		// Add translated messages to result
+		if (result.output) {
+			const batchTranslated = result.output;
+			for (const [key, value] of Object.entries(batchTranslated)) {
 				translated[key] = value;
 			}
 		}
@@ -292,3 +281,4 @@ ${JSON.stringify(Object.fromEntries(batch), null, 2)}`;
 
 	return translated;
 }
+
