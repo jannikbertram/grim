@@ -1,5 +1,14 @@
 import {GoogleGenerativeAI} from '@google/generative-ai';
 
+/**
+ * Executes an async function with exponential backoff retry logic.
+ * Only retries on rate-limiting errors (429, Resource exhausted, quota).
+ * @param function_ - The async function to execute
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @param baseDelayMs - Base delay in milliseconds for exponential backoff (default: 2000)
+ * @returns The result of the function if successful
+ * @throws The last error encountered if all retries fail or if a non-rate-limiting error occurs
+ */
 async function withRetry<T>(
 	function_: () => Promise<T>,
 	maxRetries = 3,
@@ -13,8 +22,7 @@ async function withRetry<T>(
 			return await function_();
 		} catch (error) {
 			lastError = error as Error;
-			const isRateLimited
-				= error instanceof Error
+			const isRateLimited = error instanceof Error
 				&& (error.message.includes('429')
 					|| error.message.includes('Resource exhausted')
 					|| error.message.includes('quota'));
@@ -35,14 +43,61 @@ async function withRetry<T>(
 	throw lastError;
 }
 
+/**
+ * Configuration options for the translation function.
+ */
 export type TranslateOptions = {
+	/**
+	 * Key-value pairs of message IDs to their English source text.
+	 * @example
+	 * ```ts
+	 * { "greeting": "Hello", "farewell": "Goodbye" }
+	 * ```
+	 */
 	messages: Record<string, string>;
+
+	/**
+	 * Target language code for translation.
+	 * Supports standard language codes like 'de', 'fr', 'es', 'ja', etc.
+	 * If the code is not in the predefined list, it will be used as-is.
+	 */
 	targetLanguage: string;
+
+	/**
+	 * Product or application context to help the AI produce more accurate translations.
+	 * Include information about the product, target audience, tone, or domain-specific terminology.
+	 */
 	context: string;
+
+	/**
+	 * API key for authentication with the translation provider.
+	 */
 	apiKey: string;
+
+	/**
+	 * The translation provider to use. Currently only 'gemini' is supported.
+	 */
 	provider: 'gemini';
+
+	/**
+	 * The specific model to use for translation.
+	 * @example 'gemini-2.0-flash', 'gemini-1.5-pro'
+	 */
 	model: string;
+
+	/**
+	 * Optional callback to report translation progress.
+	 * Called after each batch of messages is translated.
+	 * @param current - Number of messages translated so far
+	 * @param total - Total number of messages to translate
+	 */
 	onProgress?: (current: number, total: number) => void;
+
+	/**
+	 * Optional custom AI client for testing or alternative implementations.
+	 * When provided, bypasses the default GoogleGenerativeAI client.
+	 * @internal Primarily used for testing with mock implementations.
+	 */
 	genAiClient?: {
 		getGenerativeModel: (options: {model: string}) => {
 			generateContent: (prompt: string) => Promise<{
@@ -54,6 +109,10 @@ export type TranslateOptions = {
 	};
 };
 
+/**
+ * Mapping of language codes to human-readable language names.
+ * Used to provide better context to the AI model in translation prompts.
+ */
 const languageNames: Record<string, string> = {
 	de: 'German',
 	fr: 'French',
@@ -70,9 +129,35 @@ const languageNames: Record<string, string> = {
 	ar: 'Arabic',
 };
 
-export async function translateMessages(
-	options: TranslateOptions,
-): Promise<Record<string, string>> {
+/**
+ * Translates a collection of messages from English to a target language using AI.
+ *
+ * Messages are processed in batches of 10 for efficiency. The function includes
+ * automatic retry logic with exponential backoff for rate-limiting errors.
+ *
+ * @param options - Configuration options for the translation
+ * @returns A promise resolving to a Record mapping message IDs to their translated values
+ *
+ * @example
+ * ```ts
+ * const translations = await translateMessages({
+ *   messages: { greeting: 'Hello', farewell: 'Goodbye' },
+ *   targetLanguage: 'de',
+ *   context: 'A friendly mobile app for ordering food',
+ *   apiKey: process.env.GEMINI_API_KEY,
+ *   provider: 'gemini',
+ *   model: 'gemini-2.0-flash',
+ *   onProgress: (current, total) => console.log(`${current}/${total}`),
+ * });
+ * // Result: { greeting: 'Hallo', farewell: 'Auf Wiedersehen' }
+ * ```
+ *
+ * @remarks
+ * - Placeholders like `{name}`, `{count}`, `{{variable}}` are preserved
+ * - HTML tags and markdown formatting are maintained
+ * - If JSON parsing fails for a batch, original text is returned as fallback
+ */
+export async function translateMessages(options: TranslateOptions): Promise<Record<string, string>> {
 	const {
 		messages,
 		targetLanguage,
@@ -130,8 +215,8 @@ ${JSON.stringify(Object.fromEntries(batch), null, 2)}`;
 		if (jsonMatch) {
 			try {
 				const batchTranslated = JSON.parse(jsonMatch[0]) as Record<
-				string,
-				string
+					string,
+					string
 				>;
 				for (const [key, value] of Object.entries(batchTranslated)) {
 					translated[key] = value;
