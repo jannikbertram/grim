@@ -44,9 +44,9 @@ importers:
 
   apps/cli:
     dependencies:
-      '@grim/translator':
+      '@rire/core':
         specifier: workspace:*
-        version: link:../../packages/translator
+        version: link:../../packages/core
       dotenv:
         specifier: ^17.2.4
         version: 17.2.4
@@ -79,7 +79,7 @@ importers:
         specifier: ^5.0.3
         version: 5.9.3
 
-  packages/translator:
+  packages/core:
     dependencies:
       '@ai-sdk/anthropic':
         specifier: ^3.0.37

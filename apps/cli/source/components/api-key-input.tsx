@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {Box, Text} from 'ink';
 import TextInput from 'ink-text-input';
-import {verifyApiKey, type Provider} from '@grim/translator';
+import {verifyApiKey, type Provider} from '@rire/core';
 import Spinner from 'ink-spinner';
 
 type Props = {

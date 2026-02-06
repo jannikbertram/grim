@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {Box, Text, useInput} from 'ink';
-import type {RevisionSuggestion} from '@grim/translator';
+import type {RevisionSuggestion} from '@rire/core';
 
 type Props = {
 	readonly suggestions: RevisionSuggestion[];

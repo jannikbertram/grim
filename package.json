@@ -1,8 +1,8 @@
 {
-	"name": "grim",
+	"name": "rire",
 	"version": "0.0.0",
 	"private": true,
-	"description": "Grim - AI-powered translation tools",
+	"description": "Rire - Translate and improve localization files with LLMs",
 	"license": "PolyForm-Noncommercial-1.0.0",
 	"type": "module",
 	"engines": {

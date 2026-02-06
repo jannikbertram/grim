@@ -1,7 +1,7 @@
 import React from 'react';
 import {Box, Text} from 'ink';
 import SelectInput from 'ink-select-input';
-import type {Provider} from '@grim/translator';
+import type {Provider} from '@rire/core';
 
 type Props = {
 	readonly onSelect: (provider: Provider) => void;
