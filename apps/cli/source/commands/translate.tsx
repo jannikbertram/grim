@@ -7,7 +7,7 @@ import {z} from 'zod/v4';
 import {ApiKeyInput} from '../components/api-key-input.js';
 import {LanguageSelector} from '../components/language-selector.js';
 import {LlmSelector} from '../components/llm-selector.js';
-import {ModelSelector, type GeminiModel} from '../components/model-selector.js';
+import {ModelSelector} from '../components/model-selector.js';
 import {ReadmeInput} from '../components/readme-input.js';
 import {TranslationProgress} from '../components/translation-progress.js';
 import {translateMessages} from '@grim/translator';
@@ -35,7 +35,7 @@ export default function Translate({args: commandArgs}: Props) {
 	const [filePath] = commandArgs;
 	const [step, setStep] = useState<Step>('provider');
 	const [provider, setProvider] = useState<LlmProvider | undefined>(undefined);
-	const [model, setModel] = useState<GeminiModel>('gemini-2.0-flash');
+	const [model, setModel] = useState<string>('gemini-2.0-flash');
 	const [apiKey, setApiKey] = useState<string>('');
 	const [targetLanguage, setTargetLanguage] = useState<string>('');
 	const [, setReadmePath] = useState<string>('');
@@ -55,16 +55,16 @@ export default function Translate({args: commandArgs}: Props) {
 
 	const handleProviderSelect = (selectedProvider: LlmProvider) => {
 		setProvider(selectedProvider);
-		setStep('model');
-	};
-
-	const handleModelSelect = (selectedModel: GeminiModel) => {
-		setModel(selectedModel);
 		setStep('apiKey');
 	};
 
 	const handleApiKeySubmit = (key: string) => {
 		setApiKey(key);
+		setStep('model');
+	};
+
+	const handleModelSelect = (selectedModel: string) => {
+		setModel(selectedModel);
 		setStep('language');
 	};
 
@@ -73,51 +73,54 @@ export default function Translate({args: commandArgs}: Props) {
 		setStep('readme');
 	};
 
-	const handleReadmeSubmit = async (readme: string) => {
+	const handleReadmeSubmit = (readme: string) => {
 		setReadmePath(readme);
 		setStep('translating');
 
-		try {
-			// Read source file
-			const sourceContent = fs.readFileSync(absolutePath, 'utf8');
-			const messages = JSON.parse(sourceContent) as Record<string, string>;
+		// Start translation process
+		void (async () => {
+			try {
+				// Read source file
+				const sourceContent = fs.readFileSync(absolutePath, 'utf8');
+				const messages = JSON.parse(sourceContent) as Record<string, string>;
 
-			// Read readme if provided
-			let context = '';
-			if (readme && fs.existsSync(readme)) {
-				context = fs.readFileSync(readme, 'utf8');
+				// Read readme if provided
+				let context = '';
+				if (readme && fs.existsSync(readme)) {
+					context = fs.readFileSync(readme, 'utf8');
+				}
+
+				// Generate output path
+				const extension = path.extname(absolutePath);
+				const baseName = path.basename(absolutePath, extension);
+				const dirName = path.dirname(absolutePath);
+				const outPath = path.join(
+					dirName,
+					`${baseName}.${targetLanguage}${extension}`,
+				);
+
+				// Translate
+				const translated = await translateMessages({
+					messages,
+					targetLanguage,
+					context,
+					apiKey,
+					provider: provider!,
+					model,
+					onProgress(current: number, total: number) {
+						setProgress({current, total});
+					},
+				});
+
+				// Write output
+				fs.writeFileSync(outPath, JSON.stringify(translated, null, 2));
+				setOutputPath(outPath);
+				setStep('done');
+			} catch (error_) {
+				setError(error_ instanceof Error ? error_.message : 'Unknown error');
+				setStep('done');
 			}
-
-			// Generate output path
-			const extension = path.extname(absolutePath);
-			const baseName = path.basename(absolutePath, extension);
-			const dirName = path.dirname(absolutePath);
-			const outPath = path.join(
-				dirName,
-				`${baseName}.${targetLanguage}${extension}`,
-			);
-
-			// Translate
-			const translated = await translateMessages({
-				messages,
-				targetLanguage,
-				context,
-				apiKey,
-				provider: provider!,
-				model,
-				onProgress(current: number, total: number) {
-					setProgress({current, total});
-				},
-			});
-
-			// Write output
-			fs.writeFileSync(outPath, JSON.stringify(translated, null, 2));
-			setOutputPath(outPath);
-			setStep('done');
-		} catch (error_) {
-			setError(error_ instanceof Error ? error_.message : 'Unknown error');
-			setStep('done');
-		}
+		})();
 	};
 
 	return (
@@ -134,12 +137,12 @@ export default function Translate({args: commandArgs}: Props) {
 
 			{step === 'provider' && <LlmSelector onSelect={handleProviderSelect} />}
 
-			{step === 'model' && provider && (
-				<ModelSelector onSelect={handleModelSelect} />
-			)}
-
 			{step === 'apiKey' && provider && (
 				<ApiKeyInput provider={provider} onSubmit={handleApiKeySubmit} />
+			)}
+
+			{step === 'model' && apiKey && (
+				<ModelSelector apiKey={apiKey} onSelect={handleModelSelect} />
 			)}
 
 			{step === 'language' && (

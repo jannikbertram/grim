@@ -2,10 +2,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import test from 'ava';
-import {translateMessages, RateLimitError} from '../src/translator.js';
+import {
+	translateMessages,
+	RateLimitError,
+	verifyApiKey,
+	getAvailableModels,
+} from '../src/index.js';
 
 const fixturesPath = path.join(process.cwd(), 'test', 'fixtures');
 const enJson = JSON.parse(fs.readFileSync(path.join(fixturesPath, 'en.json'), 'utf8')) as Record<string, string>;
+
+// Original mock fetch
+const originalFetch = globalThis.fetch;
+
+test.after(() => {
+	globalThis.fetch = originalFetch;
+});
 
 /**
  * Creates a mock GenAI client for testing.
@@ -630,4 +642,78 @@ test('translateMessages passes configured model to the AI client', async t => {
 	});
 
 	t.is(capturedModelName, 'gemini-1.5-pro');
+});
+
+// ============================================================================
+// API Verification & Model Fetching Tests
+// ============================================================================
+
+test('verifyApiKey returns true for valid key', async t => {
+	globalThis.fetch = async (url) => {
+		if (url.toString().includes('key=valid-key')) {
+			return {
+				status: 200,
+				ok: true,
+				json: async () => ({}),
+			} as Response;
+		}
+
+		return {
+			status: 400,
+			ok: false,
+		} as Response;
+	};
+
+	const isValid = await verifyApiKey('valid-key');
+	t.true(isValid);
+});
+
+test('verifyApiKey returns false for invalid key', async t => {
+	globalThis.fetch = async () => ({
+		status: 400,
+		ok: false,
+	} as Response);
+
+	const isValid = await verifyApiKey('invalid-key');
+	t.false(isValid);
+});
+
+test('getAvailableModels returns list of models', async t => {
+	globalThis.fetch = async () => ({
+		status: 200,
+		ok: true,
+		json: async () => ({
+			models: [
+				{
+					name: 'models/gemini-pro',
+					displayName: 'Gemini Pro',
+					supportedGenerationMethods: ['generateContent'],
+				},
+				{
+					name: 'models/gemini-flash',
+					displayName: 'Gemini Flash',
+					supportedGenerationMethods: ['generateContent'],
+				},
+				{
+					name: 'models/embedding-001',
+					displayName: 'Embedding',
+					supportedGenerationMethods: ['embedContent'],
+				},
+			],
+		}),
+	} as Response);
+
+	const models = await getAvailableModels('valid-key');
+	t.is(models.length, 2);
+	t.deepEqual(models[0], {value: 'gemini-pro', label: 'Gemini Pro'});
+	t.deepEqual(models[1], {value: 'gemini-flash', label: 'Gemini Flash'});
+});
+
+test('getAvailableModels handles empty response or error', async t => {
+	globalThis.fetch = async () => {
+		throw new Error('Network error');
+	};
+
+	const models = await getAvailableModels('valid-key');
+	t.deepEqual(models, []);
 });

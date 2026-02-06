@@ -1,72 +1,80 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {Box, Text} from 'ink';
 import SelectInput from 'ink-select-input';
-
-export type GeminiModel =
-	| 'gemini-3-flash-preview'
-	| 'gemini-3-pro-preview'
-	| 'gemini-2.5-pro'
-	| 'gemini-2.5-flash'
-	| 'gemini-2.5-flash-lite'
-	| 'gemini-2.0-flash'
-	| 'gemini-2.0-flash-lite';
+import Spinner from 'ink-spinner';
+import {getAvailableModels, type Model} from '@grim/translator';
 
 type Props = {
-	readonly onSelect: (model: GeminiModel) => void;
+	readonly apiKey: string;
+	readonly onSelect: (model: string) => void;
 };
 
-const geminiModels: Array<{
-	label: string;
-	value: GeminiModel;
-	description?: string;
-}> = [
-	{
-		label: '⚡ Gemini 2.5 Flash (Recommended)',
-		value: 'gemini-2.5-flash',
-		description: 'Best balance of speed, quality & cost',
-	},
-	{
-		label: '🧠 Gemini 2.5 Pro',
-		value: 'gemini-2.5-pro',
-		description: 'High intelligence for complex translations',
-	},
-	{
-		label: '💨 Gemini 2.5 Flash Lite',
-		value: 'gemini-2.5-flash-lite',
-		description: 'Fastest & cheapest, good for high volume',
-	},
-	{
-		label: '🌟 Gemini 3.0 Pro Preview',
-		value: 'gemini-3-pro-preview',
-		description: 'Next-gen reasoning and capability',
-	},
-	{
-		label: '✨ Gemini 3.0 Flash Preview',
-		value: 'gemini-3-flash-preview',
-		description: 'Next-gen speed and efficiency',
-	},
-	{
-		label: '🔹 Gemini 2.0 Flash',
-		value: 'gemini-2.0-flash',
-		description: 'Reliable previous generation',
-	},
-	{
-		label: '🔸 Gemini 2.0 Flash Lite',
-		value: 'gemini-2.0-flash-lite',
-		description: 'Lightweight previous generation',
-	},
-];
+export function ModelSelector({apiKey, onSelect}: Props) {
+	const [models, setModels] = useState<Array<{label: string; value: string}>>([]);
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | undefined>();
 
-export function ModelSelector({onSelect}: Props) {
-	const handleSelect = (item: {label: string; value: GeminiModel}) => {
+	useEffect(() => {
+		let isMounted = true;
+
+		const fetchModels = async () => {
+			setIsLoading(true);
+			setError(undefined);
+			try {
+				const availableModels = await getAvailableModels(apiKey);
+				if (isMounted) {
+					if (availableModels.length > 0) {
+						setModels(availableModels);
+					} else {
+						setError('No models found for this API key.');
+					}
+				}
+			} catch {
+				if (isMounted) {
+					setError('Failed to fetch models.');
+				}
+			} finally {
+				if (isMounted) {
+					setIsLoading(false);
+				}
+			}
+		};
+
+		void fetchModels();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [apiKey]);
+
+	const handleSelect = (item: {label: string; value: string}) => {
 		onSelect(item.value);
 	};
+
+	if (isLoading) {
+		return (
+			<Box>
+				<Text color="blue">
+					<Spinner type="dots" /> Loading available models...
+				</Text>
+			</Box>
+		);
+	}
+
+	if (error) {
+		return (
+			<Box flexDirection="column">
+				<Text color="red">✖ {error}</Text>
+				<Text dimColor>Please check your API key and connection.</Text>
+			</Box>
+		);
+	}
 
 	return (
 		<Box flexDirection='column'>
 			<Text bold>Select Model:</Text>
 			<Box marginTop={1}>
-				<SelectInput items={geminiModels} onSelect={handleSelect} />
+				<SelectInput items={models} onSelect={handleSelect} />
 			</Box>
 		</Box>
 	);

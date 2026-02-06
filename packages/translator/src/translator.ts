@@ -145,6 +145,98 @@ const languageNames: Record<string, string> = {
 };
 
 /**
+ * Verifies that the provided API key is valid.
+ *
+ * @param apiKey - The Google Gemini API key to verify.
+ * @returns A promise that resolves to true if the key is valid, false otherwise.
+ */
+export async function verifyApiKey(apiKey: string): Promise<boolean> {
+	if (!apiKey) {
+		return false;
+	}
+
+	try {
+		// Try to list models to verify the key
+		const response = await fetch(
+			`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+		);
+		return response.status === 200;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Represents a Gemini model available for use.
+ */
+export type Model = {
+	/**
+	 * The model identifier (e.g., 'gemini-pro').
+	 */
+	value: string;
+	/**
+	 * A human-readable label for the model.
+	 */
+	label: string;
+};
+
+/**
+ * Fetches the list of available Gemini models for the provided API key.
+ *
+ * @param apiKey - The Google Gemini API key.
+ * @returns A promise that resolves to an array of available models.
+ */
+export async function getAvailableModels(apiKey: string): Promise<Model[]> {
+	try {
+		const response = await fetch(
+			`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+		);
+
+		if (!response.ok) {
+			return [];
+		}
+
+		const data = (await response.json()) as {
+			models: Array<{
+				name: string;
+				displayName: string;
+				supportedGenerationMethods: string[];
+			}>;
+		};
+
+		// Filter for standard Gemini text generation models only:
+		// - Must support generateContent
+		// - Must start with "models/gemini-" (excludes gemma, nano-banana, deep-research, etc.)
+		// - Exclude specialized models (image, tts, robotics, computer-use, experimental)
+		const excludePatterns = [
+			'imagen',       // Image generation
+			'-image',       // Image variants
+			'-tts',         // Text-to-speech
+			'robotics',     // Robotics models
+			'computer-use', // Computer use models
+			'-exp-',        // Experimental models
+		];
+
+		return data.models
+			.filter(model => {
+				const name = model.name.toLowerCase();
+				return (
+					model.supportedGenerationMethods.includes('generateContent')
+					&& name.startsWith('models/gemini-')
+					&& !excludePatterns.some(pattern => name.includes(pattern))
+				);
+			})
+			.map(model => ({
+				value: model.name.replace('models/', ''),
+				label: model.displayName,
+			}))
+			.sort((a, b) => b.value.localeCompare(a.value)); // Sort newest first (heuristic)
+	} catch {
+		return [];
+	}
+}
+
+/**
  * Translates a collection of messages from English to a target language using AI.
  *
  * Messages are processed in batches of 10 for efficiency. The function includes

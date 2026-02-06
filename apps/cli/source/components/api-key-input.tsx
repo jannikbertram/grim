@@ -1,6 +1,8 @@
 import React, {useState} from 'react';
 import {Box, Text} from 'ink';
 import TextInput from 'ink-text-input';
+import {verifyApiKey} from '@grim/translator';
+import Spinner from 'ink-spinner';
 
 type Props = {
 	readonly provider: string;
@@ -9,10 +11,29 @@ type Props = {
 
 export function ApiKeyInput({provider, onSubmit}: Props) {
 	const [value, setValue] = useState('');
+	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState<string | undefined>();
 
-	const handleSubmit = (submittedValue: string) => {
-		if (submittedValue.trim()) {
-			onSubmit(submittedValue.trim());
+	const handleSubmit = async (submittedValue: string) => {
+		const trimmedValue = submittedValue.trim();
+		if (!trimmedValue) {
+			return;
+		}
+
+		setIsLoading(true);
+		setError(undefined);
+
+		try {
+			const isValid = await verifyApiKey(trimmedValue);
+			if (isValid) {
+				onSubmit(trimmedValue);
+			} else {
+				setError('Invalid API Key. Please check and try again.');
+			}
+		} catch {
+			setError('Failed to verify API key. Please check your connection.');
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
@@ -32,10 +53,25 @@ export function ApiKeyInput({provider, onSubmit}: Props) {
 				<TextInput
 					mask='*'
 					value={value}
-					onChange={setValue}
+					onChange={(newValue) => {
+						setValue(newValue);
+						setError(undefined);
+					}}
 					onSubmit={handleSubmit}
 				/>
 			</Box>
+			{isLoading && (
+				<Box marginTop={1}>
+					<Text color="blue">
+						<Spinner type="dots" /> Verifying API key...
+					</Text>
+				</Box>
+			)}
+			{error && (
+				<Box marginTop={1}>
+					<Text color="red">✖ {error}</Text>
+				</Box>
+			)}
 		</Box>
 	);
 }

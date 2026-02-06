@@ -7,4 +7,11 @@
  * @packageDocumentation
  */
 
-export {translateMessages, type TranslateOptions} from './translator.js';
+export {
+	translateMessages,
+	verifyApiKey,
+	getAvailableModels,
+	RateLimitError,
+	type TranslateOptions,
+	type Model,
+} from './translator.js';
