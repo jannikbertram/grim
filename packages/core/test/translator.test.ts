@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import test from 'ava';
-import {translateMessages} from '../source/services/translator.js';
+import {translateMessages} from '../src/translator.js';
 
 const fixturesPath = path.join(process.cwd(), 'test', 'fixtures');
 const enJson = JSON.parse(

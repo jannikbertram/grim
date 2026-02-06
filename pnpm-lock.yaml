@@ -44,9 +44,9 @@ importers:
 
   apps/cli:
     dependencies:
-      '@google/generative-ai':
-        specifier: ^0.24.1
-        version: 0.24.1
+      '@grim-t9n/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       ink:
         specifier: ^6.6.0
         version: 6.6.0(@types/react@19.2.13)(react@19.2.4)
@@ -69,18 +69,25 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
-      '@ava/typescript':
-        specifier: ^6.0.0
-        version: 6.0.0
       '@types/react':
         specifier: ^19.2.10
         version: 19.2.13
+      typescript:
+        specifier: ^5.0.3
+        version: 5.9.3
+
+  packages/core:
+    dependencies:
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
+    devDependencies:
+      '@ava/typescript':
+        specifier: ^6.0.0
+        version: 6.0.0
       ava:
         specifier: ^6.4.1
         version: 6.4.1(@ava/typescript@6.0.0)
-      ink-testing-library:
-        specifier: ^3.0.0
-        version: 3.0.0(@types/react@19.2.13)
       typescript:
         specifier: ^5.0.3
         version: 5.9.3
@@ -1545,15 +1552,6 @@ packages:
     peerDependencies:
       ink: '>=4.0.0'
       react: '>=18.0.0'
-
-  ink-testing-library@3.0.0:
-    resolution: {integrity: sha512-ItyyoOmcm6yftb7c5mZI2HU22BWzue8PBbO3DStmY8B9xaqfKr7QJONiWOXcwVsOk/6HuVQ0v7N5xhPaR3jycA==}
-    engines: {node: '>=14.16'}
-    peerDependencies:
-      '@types/react': '>=18.0.0'
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
 
   ink-text-input@6.0.0:
     resolution: {integrity: sha512-Fw64n7Yha5deb1rHY137zHTAbSTNelUKuB5Kkk2HACXEtwIHBCf9OH2tP/LQ9fRYTl1F0dZgbW0zPnZk6FA9Lw==}
@@ -4601,10 +4599,6 @@ snapshots:
       cli-spinners: 2.9.2
       ink: 6.6.0(@types/react@19.2.13)(react@19.2.4)
       react: 19.2.4
-
-  ink-testing-library@3.0.0(@types/react@19.2.13):
-    optionalDependencies:
-      '@types/react': 19.2.13
 
   ink-text-input@6.0.0(ink@6.6.0(@types/react@19.2.13)(react@19.2.4))(react@19.2.4):
     dependencies:
