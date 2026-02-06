@@ -65,7 +65,7 @@ export function ContextInput({onSubmit}: Props) {
 		);
 	}
 
-	// mode === 'direct'
+	// Mode === 'direct'
 	return (
 		<Box flexDirection='column'>
 			<Text bold>Enter context directly:</Text>

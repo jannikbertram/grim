@@ -11,8 +11,15 @@ export {
 	translateMessages,
 	verifyApiKey,
 	RateLimitError,
+	reviseMessages,
 	type TranslateOptions,
 	type Model,
 	type Provider,
+	type ReviseOptions,
+	type RevisionSuggestion,
 } from './translator.js';
 
+export {
+	type RevisionErrorType,
+	REVISION_ERROR_TYPES,
+} from './consts.js';

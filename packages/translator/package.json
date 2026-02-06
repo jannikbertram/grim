@@ -45,5 +45,17 @@
 		"@ai-sdk/openai": "^3.0.25",
 		"ai": "^6.0.73",
 		"zod": "^4.3.6"
+	},
+	"xo": {
+		"rules": {
+			"@typescript-eslint/naming-convention": [
+				"error",
+				{
+					"selector": "variable",
+					"modifiers": ["const", "exported"],
+					"format": ["strictCamelCase", "UPPER_CASE"]
+				}
+			]
+		}
 	}
 }

@@ -3,8 +3,10 @@ import {createGoogleGenerativeAI} from '@ai-sdk/google';
 import {createOpenAI} from '@ai-sdk/openai';
 import {createAnthropic} from '@ai-sdk/anthropic';
 import {z} from 'zod';
-import {TRANSLATION_BATCH_SIZE} from './consts.js';
-import {buildSystemPrompt, buildTranslationPrompt} from './prompts.js';
+import {TRANSLATION_BATCH_SIZE, REVISION_BATCH_SIZE, type RevisionErrorType} from './consts.js';
+import {
+	buildSystemPrompt, buildTranslationPrompt, buildRevisionSystemPrompt, buildRevisionPrompt,
+} from './prompts.js';
 
 /**
  * Supported LLM providers for translation.
@@ -79,7 +81,6 @@ export type TranslateOptions = {
 	aiModel?: LanguageModel;
 };
 
-
 /**
  * Creates an AI model instance for the specified provider.
  * @param provider - The LLM provider to use
@@ -141,7 +142,7 @@ export async function verifyApiKey(apiKey: string, provider: Provider): Promise<
 						'anthropic-version': '2023-06-01',
 						'content-type': 'application/json',
 					},
-					// eslint-disable-next-line @typescript-eslint/naming-convention
+
 					body: JSON.stringify({model: 'claude-3-haiku-20240307', max_tokens: 1, messages: [{role: 'user', content: 'hi'}]}),
 				});
 				// 200 = success, 400 = bad request (but valid key), 401 = invalid key
@@ -243,3 +244,145 @@ export async function translateMessages({
 	return translated;
 }
 
+/**
+ * A single revision suggestion for a message.
+ */
+export type RevisionSuggestion = {
+	/** The message key that has an issue */
+	key: string;
+	/** The original message text */
+	original: string;
+	/** The suggested replacement text */
+	suggested: string;
+	/** Brief explanation of why this change is suggested */
+	reason: string;
+	/** The type/severity of the issue */
+	type: RevisionErrorType;
+};
+
+/**
+ * Configuration options for the revision function.
+ */
+export type ReviseOptions = {
+	/**
+	 * Key-value pairs of message IDs to their text content.
+	 */
+	messages: Record<string, string>;
+
+	/**
+	 * Error types to check for. Defaults to ['grammar'] if not specified.
+	 */
+	errorTypes: RevisionErrorType[];
+
+	/**
+	 * Product or application context to help the AI make better suggestions.
+	 */
+	context: string;
+
+	/**
+	 * API key for authentication with the translation provider.
+	 */
+	apiKey: string;
+
+	/**
+	 * The translation provider to use.
+	 */
+	provider: Provider;
+
+	/**
+	 * The specific model to use for revision.
+	 */
+	model: string;
+
+	/**
+	 * Optional callback to report revision progress.
+	 * Called after each batch of messages is analyzed.
+	 * @param current - Number of messages analyzed so far
+	 * @param total - Total number of messages to analyze
+	 */
+	onProgress?: (current: number, total: number) => void;
+
+	/**
+	 * Optional custom AI model for testing.
+	 * @internal
+	 */
+	aiModel?: LanguageModel;
+};
+
+/**
+ * Analyzes a collection of messages for grammar, wording, and phrasing issues.
+ *
+ * Messages are processed in batches of 100 for efficiency. Uses structured output
+ * to guarantee valid JSON responses from the AI model.
+ *
+ * @param options - Configuration options for the revision
+ * @returns A promise resolving to an array of revision suggestions
+ *
+ * @example
+ * ```ts
+ * const suggestions = await reviseMessages({
+ *   messages: { greeting: 'Hello there friend' },
+ *   errorTypes: ['grammar', 'wording'],
+ *   context: 'A professional business application',
+ *   apiKey: process.env.GOOGLE_API_KEY,
+ *   provider: 'gemini',
+ *   model: 'gemini-2.0-flash',
+ *   onProgress: (current, total) => console.log(`${current}/${total}`),
+ * });
+ * ```
+ */
+export async function reviseMessages({
+	messages,
+	errorTypes,
+	context,
+	apiKey,
+	provider,
+	model: modelName,
+	onProgress,
+	aiModel,
+}: ReviseOptions): Promise<RevisionSuggestion[]> {
+	const model = aiModel ?? createModel(provider, modelName, apiKey);
+
+	const entries = Object.entries(messages);
+	const total = entries.length;
+	const suggestions: RevisionSuggestion[] = [];
+
+	const systemPrompt = buildRevisionSystemPrompt(errorTypes, context);
+
+	// Schema for structured output: array of revision suggestions
+	const suggestionSchema = z.object({
+		key: z.string().describe('The message key'),
+		original: z.string().describe('The original text'),
+		suggested: z.string().describe('The suggested replacement'),
+		reason: z.string().describe('Brief explanation for the suggestion'),
+		type: z.enum(['grammar', 'wording', 'phrasing']).describe('The type of issue'),
+	});
+
+	const revisionsSchema = z.array(suggestionSchema);
+
+	let processed = 0;
+	for (let i = 0; i < entries.length; i += REVISION_BATCH_SIZE) {
+		const batch = entries.slice(i, i + REVISION_BATCH_SIZE);
+
+		const prompt = buildRevisionPrompt(systemPrompt, batch);
+
+		// eslint-disable-next-line no-await-in-loop
+		const result = await generateText({
+			model,
+			prompt,
+			output: Output.object({schema: revisionsSchema}),
+		});
+
+		// Add suggestions from this batch
+		if (result.output && Array.isArray(result.output)) {
+			for (const suggestion of result.output) {
+				suggestions.push(suggestion as RevisionSuggestion);
+			}
+		}
+
+		processed += batch.length;
+		onProgress?.(processed, total);
+	}
+
+	return suggestions;
+}

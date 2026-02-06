@@ -1,0 +1,12 @@
+{
+  "greeting": "Hello",
+  "farewell": "Goodbye",
+  "welcome.message": "Welcome to your app!",
+  "user.profile.title": "Your Profile",
+  "button.submit": "Submit",
+  "button.cancel": "Cancel",
+  "error.required": "This field is required",
+  "notification.success": "Successfully saved your changes",
+  "placeholder.search": "Search...",
+  "menu.settings": "Settings"
+}
