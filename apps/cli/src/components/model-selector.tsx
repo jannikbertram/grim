@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {Box, Text} from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
-import type {Provider} from '@rire/core';
+import type {Provider} from '@jive/core';
 
 type Props = {
 	readonly provider: Provider;

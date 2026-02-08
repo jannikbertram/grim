@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {Box, Text, useInput} from 'ink';
-import type {RevisionSuggestion} from '@rire/core';
+import type {RevisionSuggestion} from '@jive/core';
 
 type Props = {
 	readonly suggestions: RevisionSuggestion[];

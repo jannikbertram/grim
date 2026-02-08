@@ -1,4 +1,4 @@
-import {adviseWebsite, type RevisionErrorType} from '@rire/core';
+import {adviseWebsite, type RevisionErrorType} from '@jive/core';
 
 export async function POST(request: Request) {
 	const apiKey = process.env['GOOGLE_API_KEY'];

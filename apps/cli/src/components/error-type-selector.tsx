@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {Box, Text, useInput} from 'ink';
-import {REVISION_ERROR_TYPES, type RevisionErrorType} from '@rire/core';
+import {REVISION_ERROR_TYPES, type RevisionErrorType} from '@jive/core';
 
 type Props = {
 	readonly onSubmit: (errorTypes: RevisionErrorType[]) => void;

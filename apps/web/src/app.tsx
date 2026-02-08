@@ -45,7 +45,7 @@ export function App() {
 
 	return (
 		<div className="container">
-			<h1>Rire</h1>
+			<h1>Jive</h1>
 			<p className="subtitle">Analyze a website for grammar, wording, and phrasing issues.</p>
 
 			<form onSubmit={handleSubmit}>

@@ -79,7 +79,7 @@ importers:
         specifier: ^5.0.3
         version: 5.9.3
 
-  apps/web:
+  apps/jive:
     dependencies:
       '@rire/core':
         specifier: workspace:*

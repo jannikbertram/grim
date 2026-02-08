@@ -3,7 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 import {useState} from 'react';
 import {Box, Text} from 'ink';
-import {translateMessages, type Provider} from '@rire/core';
+import {translateMessages, type Provider} from '@jive/core';
 import {z} from 'zod/v4';
 import {ApiKeyInput} from '../components/api-key-input.js';
 import {ContextInput} from '../components/context-input.js';
@@ -274,7 +274,7 @@ export default function Translate({args: commandArgs, options: commandOptions}: 
 		<Box flexDirection='column' padding={1}>
 			<Box marginBottom={1}>
 				<Text bold color='cyan'>
-					🌐 Rire Translator
+					🌐 Jive Translator
 				</Text>
 			</Box>
 

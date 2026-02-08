@@ -8,7 +8,7 @@ import {
 	type Provider,
 	type RevisionErrorType,
 	type RevisionSuggestion,
-} from '@rire/core';
+} from '@jive/core';
 import {z} from 'zod/v4';
 import Spinner from 'ink-spinner';
 import {ApiKeyInput} from '../components/api-key-input.js';
@@ -263,7 +263,7 @@ export default function Revise({args: commandArgs, options: commandOptions}: Pro
 		<Box flexDirection='column' padding={1}>
 			<Box marginBottom={1}>
 				<Text bold color='cyan'>
-					📝 Rire Reviser
+					📝 Jive Reviser
 				</Text>
 			</Box>
 

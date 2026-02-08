@@ -1,8 +1,8 @@
 {
-	"name": "rire",
+	"name": "jive",
 	"version": "0.0.0",
 	"private": true,
-	"description": "Rire - Translate and improve localization files with LLMs",
+	"description": "Jive - Translate and improve localization files with LLMs",
 	"license": "PolyForm-Noncommercial-1.0.0",
 	"type": "module",
 	"engines": {
